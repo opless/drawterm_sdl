@@ -13,6 +13,8 @@
 //#include <cursor.h>
 #include "screen.h"
 
+#include "sdlstub.h"
+
 Memimage *gscreen;
 char     *snarfbuf;
 
@@ -160,7 +162,7 @@ void screensize(Rectangle r, ulong chan)
 {
     XLOG("screensize");
     XLOG("  r= %d-%d, %d-%d",r.min.x,r.max.x,r.min.y,r.max.y);
-    XLOG("  chan = %lu", chan);
+    XLOG("  chan = %u", chan);
     Memimage *i;
 
     if((i = allocmemimage(r, chan)) == nil)
@@ -195,13 +197,17 @@ void flushmemscreen(Rectangle r) {
     // copy area of gscreen to actual display
 
     char name[2048];
-    sprintf(name,"screen-%08d_%d-%d_%d-%d.png",count++,r.min.x,r.max.x,r.min.y,r.max.y);
-    write_png_file(name,1024,1024,gscreen->data->bdata);
+    //sprintf(name,"screen-%08d_%d-%d_%d-%d.png",count++,r.min.x,r.max.x,r.min.y,r.max.y);
+    //XLOG("  calling.: write_png_file, '%s'",name);
+    //write_png_file(name,1024,1024,gscreen->data->bdata);
+    //XLOG("  returned: write_png_file");
 
     // just say the mouse is on the screen somewhere
-    ulong msec = ticks();
-    absmousetrack(256, 256, 0, msec);
-
+    // ulong msec = ticks();
+    // absmousetrack(256, 256, 0, msec);
+    //XLOG("  calling.: sdl_write");
+    sdl_write(1024,1024, gscreen->data->bdata,r.min.y,r.max.x,r.min.y,r.max.y);
+    //XLOG("  returned: sdl_write");
 }
 
 
@@ -243,10 +249,15 @@ void setcursor() {
     qunlock(&drawlock);
 
 }
+static void cpuproc(void *arg) {
+    XLOG("cpuproc");
 
+    cpubody();
+}
 void guimain(void)
 {
     XLOG("guimain");
 
-    cpubody();
+    kproc("cpu", cpuproc, nil);
+    sdl_loop();
 }
