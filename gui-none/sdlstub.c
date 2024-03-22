@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "none.h"
+#include "keyboard.h"
 
 SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
@@ -205,6 +206,25 @@ void tmp_understand_keyboard(SDL_Event *in, char *buf) {
     n = e->keysym.sym;
     SDL_Log("                e.keysym.sym      = (0x%x) %s", n, SDL_GetKeyName(n));
 }
+void tmp_understand_textinput(SDL_Event *in, char *buf) {
+    tmp_understand_plain(in,buf);
+    SDL_Log("                SDL_TextInput");
+    SDL_Log("                e.windowID= %u", in->text.windowID);
+    SDL_Log("                e.text    = '%s'", in->text.text);
+    char *p = in->text.text;
+    SDL_Log("                e.text  00= "
+            "%02x %02x %02x %02x . %02x %02x %02x %02x : ",
+            p[0x00],p[0x01],p[0x02],p[0x03], p[0x04],p[0x05],p[0x06],p[0x07]);
+    SDL_Log("                e.text  08= "
+            "%02x %02x %02x %02x . %02x %02x %02x %02x | ",
+            p[0x08],p[0x09],p[0x0A],p[0x0B], p[0x0C],p[0x0D],p[0x0E],p[0x0F]);
+    SDL_Log("                e.text  10= "
+            "%02x %02x %02x %02x . %02x %02x %02x %02x : ",
+            p[0x10],p[0x11],p[0x12],p[0x13], p[0x14],p[0x15],p[0x16],p[0x17]);
+    SDL_Log("                e.text  18= "
+            "%02x %02x %02x %02x . %02x %02x %02x %02x",
+            p[0x18],p[0x19],p[0x1A],p[0x1B], p[0x1C],p[0x1D],p[0x1E],p[0x1F]);
+}
 void tmp_understand_mousem(SDL_Event *in, char *buf) {
     tmp_understand_plain(in,buf);
     SDL_MouseMotionEvent *e = (SDL_MouseMotionEvent *)in;
@@ -221,9 +241,9 @@ void tmp_understand_mouseb(SDL_Event *in, char *buf) {
     SDL_MouseButtonEvent *e = (SDL_MouseButtonEvent *)in;
     SDL_Log("                SDL_MouseMotionEvent");
     SDL_Log("                e.windowID= %u", e->windowID);
-    SDL_Log("                e.which   = %u", e->which);
+    SDL_Log("                e.which   = %u %s", e->which, e->which == SDL_TOUCH_MOUSEID ? "Touch" : "Mouse");
     SDL_Log("                e.button  = %d", e->button);
-    SDL_Log("                e.state   = %d", e->state);
+    SDL_Log("                e.state   = 0x%04x %s", e->state, e->state == SDL_PRESSED ? "PRESSED" : "RELEASED");
     SDL_Log("                e.clicks  = %d", e->clicks);
     SDL_Log("                e.x       = %d", e->x);
     SDL_Log("                e.y       = %d", e->y);
@@ -231,9 +251,9 @@ void tmp_understand_mouseb(SDL_Event *in, char *buf) {
 void tmp_understand_mousew(SDL_Event *in, char *buf) {
     tmp_understand_plain(in,buf);
     SDL_MouseWheelEvent *e = (SDL_MouseWheelEvent *)in;
-    SDL_Log("                SDL_MouseMotionEvent");
+    SDL_Log("                SDL_MouseWheelEvent");
     SDL_Log("                e.windowID= %u", e->windowID);
-    SDL_Log("                e.which   = %u", e->which);
+    SDL_Log("                e.which   = %u %s", e->which, e->which == SDL_TOUCH_MOUSEID ? "Touch" : "Mouse");
     SDL_Log("                e.x       = %d", e->x);
     SDL_Log("                e.y       = %d", e->y);
     SDL_Log("                e.direction = %d", e->direction);
@@ -242,6 +262,17 @@ void tmp_understand_mousew(SDL_Event *in, char *buf) {
     SDL_Log("                e.mouseX  = %d", e->mouseX);
     SDL_Log("                e.mouseY  = %d", e->mouseY);
 }
+void tmp_understand_audiodev(SDL_Event *in, char *buf) {
+    tmp_understand_plain(in, buf);
+    SDL_Log("                SDL_AudioDeviceEvent");
+    SDL_Log("                e.iscapture= %d", in->adevice.iscapture);
+    SDL_Log("                e.which    = %u '%s'",
+            in->adevice.which,
+            SDL_GetAudioDeviceName(in->adevice.which, in->adevice.iscapture));
+
+}
+
+
 void tmp_understand(SDL_Event *e) {
     char buf[1024];
     SDL_CommonEvent *ev = (SDL_CommonEvent *)e;
@@ -260,7 +291,7 @@ void tmp_understand(SDL_Event *e) {
         case SDL_KEYDOWN: sprintf(buf, "SDL_KEYDOWN"); tmp_understand_keyboard(e,buf);  break;
         case SDL_KEYUP: sprintf(buf, "SDL_KEYUP"); tmp_understand_keyboard(e,buf); break;
         case SDL_TEXTEDITING: sprintf(buf, "SDL_TEXTEDITING"); tmp_understand_plain(e,buf);  break;
-        case SDL_TEXTINPUT: sprintf(buf, "SDL_TEXTINPUT"); tmp_understand_plain(e,buf); break;
+        case SDL_TEXTINPUT: sprintf(buf, "SDL_TEXTINPUT"); tmp_understand_textinput(e,buf); break;
         case SDL_KEYMAPCHANGED: sprintf(buf, "SDL_KEYMAPCHANGED"); tmp_understand_plain(e,buf); break;
         case SDL_TEXTEDITING_EXT: sprintf(buf, "SDL_TEXTEDITING_EXT"); tmp_understand_plain(e,buf); break; //composition
         case SDL_MOUSEMOTION: sprintf(buf, "SDL_MOUSEMOTION"); tmp_understand_mousem(e,buf); break;
@@ -278,8 +309,8 @@ void tmp_understand(SDL_Event *e) {
         case SDL_DROPTEXT: sprintf(buf, "SDL_DROPTEXT"); tmp_understand_plain(e,buf); break;
         case SDL_DROPBEGIN: sprintf(buf, "SDL_DROPBEGIN"); tmp_understand_plain(e,buf); break;
         case SDL_DROPCOMPLETE: sprintf(buf, "SDL_DROPCOMPLETE"); tmp_understand_plain(e,buf); break;
-        case SDL_AUDIODEVICEADDED: sprintf(buf, "SDL_AUDIODEVICEADDED"); tmp_understand_plain(e,buf); break;
-        case SDL_AUDIODEVICEREMOVED: sprintf(buf, "SDL_AUDIODEVICEREMOVED"); tmp_understand_plain(e,buf); break;
+        case SDL_AUDIODEVICEADDED: sprintf(buf, "SDL_AUDIODEVICEADDED"); tmp_understand_audiodev(e,buf); break;
+        case SDL_AUDIODEVICEREMOVED: sprintf(buf, "SDL_AUDIODEVICEREMOVED"); tmp_understand_audiodev(e,buf); break;
         case SDL_SENSORUPDATE: sprintf(buf, "SDL_SENSORUPDATE"); tmp_understand_plain(e,buf); break;
         case SDL_RENDER_TARGETS_RESET: sprintf(buf, "SDL_RENDER_TARGETS_RESET"); tmp_understand_plain(e,buf); break;
         case SDL_RENDER_DEVICE_RESET: sprintf(buf, "SDL_RENDER_DEVICE_RESET"); tmp_understand_plain(e,buf); break;
@@ -298,8 +329,8 @@ void sdl_loop() {
             SDL_Event e;
 
             if(SDL_PollEvent(&e)) {
-                tmp_understand(&e);
                 int temp =0;
+                int flag =0;
                 switch (e.type) {
                     case SDL_QUIT:
                         run = 0;
@@ -309,7 +340,88 @@ void sdl_loop() {
                     case SDL_MOUSEBUTTONDOWN:
                         temp = SDL_GetMouseState(NULL, NULL); // probably not the right way to do things
                         post_mouse(e.button.x, e.button.y,temp, e.common.timestamp);
+                        break;
+
+                    case SDL_KEYDOWN:
+                    case SDL_KEYUP:
+                        tmp_understand(&e);
+                        temp = e.key.keysym.sym;
+                        flag = e.type == SDL_KEYDOWN;
+
+                        if(temp < 0x80) {
+                            if(temp == SDLK_RETURN) {
+                                temp = '\n';
+                            }
+                            post_keyboard(temp, flag);
+                        } else {
+                            switch (temp) {
+                                case SDLK_HOME: post_keyboard(Khome,flag); break;
+                                case SDLK_UP: post_keyboard(Kup,flag); break;
+                                case SDLK_DOWN: post_keyboard(Kdown,flag); break;
+                                case SDLK_PAGEUP: post_keyboard(Kpgup,flag); break;
+                                case SDLK_PRINTSCREEN: post_keyboard(Kprint,flag); break; // ASSUMPTION
+                                case SDLK_LEFT: post_keyboard(Kleft,flag); break;
+                                case SDLK_RIGHT: post_keyboard(Kright,flag); break;
+                                case SDLK_PAGEDOWN: post_keyboard(Kpgdown,flag); break;
+                                case SDLK_INSERT: post_keyboard(Kins,flag); break; // Also Help on some macs
+
+                                // modifiers
+                                case SDLK_LALT:
+                                case SDLK_RALT: post_keyboard(Kalt,flag); break;
+                                case SDLK_LSHIFT:
+                                case SDLK_RSHIFT: post_keyboard(Kshift,flag); break;
+                                case SDLK_LCTRL:
+                                case SDLK_RCTRL: post_keyboard(Kctl,flag); break;
+
+                                case SDLK_END: post_keyboard(Kend,flag); break;
+                                case SDLK_SCROLLLOCK: post_keyboard(Kscroll,flag); break; // ASSUMPTION
+                                //case SDLK_: post_keyboard(Kscrolloneup,flag); break; // mouse scroll wheel
+                                //case SDLK_: post_keyboard(Kscrollonedown,flag); break; // mouse scroll wheel
+
+                                case SDLK_AUDIOPREV: post_keyboard(Ksbwd,flag); break;
+                                case SDLK_AUDIONEXT: post_keyboard(Ksfwd,flag); break;
+                                case SDLK_AUDIOSTOP: post_keyboard(Kpause,flag); break;
+                                case SDLK_VOLUMEDOWN: post_keyboard(Kvoldn,flag); break;
+                                case SDLK_VOLUMEUP: post_keyboard(Kvolup,flag); break;
+                                case SDLK_MUTE: // ASSUMPTION
+                                case SDLK_AUDIOMUTE: post_keyboard(Kmute,flag); break;
+                                case SDLK_BRIGHTNESSDOWN: post_keyboard(Kbrtdn,flag); break;
+                                case SDLK_BRIGHTNESSUP: post_keyboard(Kbrtup,flag); break;
+
+                                case SDLK_PAUSE: post_keyboard(Kbreak,flag); break;
+                                // modifier
+                                case SDLK_CAPSLOCK: post_keyboard(Kcaps,flag); break;
+                                case SDLK_NUMLOCKCLEAR: post_keyboard(Knum,flag); break;  // CLEAR on some macs
+                                // case SDLK_: post_keyboard(Kmiddle,flag); break; // middle mouse
+                                // modifier (RIGHT ALT?)
+                                // case SDLK_: post_keyboard(Kaltgr,flag); break;
+                                case SDLK_LGUI:
+                                case SDLK_RGUI: post_keyboard(Kmod4,flag); break;
+                                // Kmouse, mouse keys! case SDLK_: post_keyboard(Kmouse,flag); break;
+
+                                // F Keys.
+                                case SDLK_F1: post_keyboard(KF|1,flag); break;
+                                case SDLK_F2: post_keyboard(KF|2,flag); break;
+                                case SDLK_F3: post_keyboard(KF|3,flag); break;
+                                case SDLK_F4: post_keyboard(KF|4,flag); break;
+                                case SDLK_F5: post_keyboard(KF|5,flag); break;
+                                case SDLK_F6: post_keyboard(KF|6,flag); break;
+                                case SDLK_F7: post_keyboard(KF|7,flag); break;
+                                case SDLK_F8: post_keyboard(KF|8,flag); break;
+                                case SDLK_F9: post_keyboard(KF|9,flag); break;
+                                case SDLK_F10: post_keyboard(KF|10,flag); break;
+                                case SDLK_F11: post_keyboard(KF|11,flag); break;
+                                case SDLK_F12: post_keyboard(KF|12,flag); break;
+
+                                // unsure what to do about numpad
+                                default:
+                                    SDL_Log("??? KeySym unknown 0x%04x %s",temp, e.type == SDL_KEYDOWN ? "Down" : "Up");
+                                    break;
+                            }
+                        }
+                        break;
                     default:
+                        tmp_understand(&e);
                         break;
                 }
             }
