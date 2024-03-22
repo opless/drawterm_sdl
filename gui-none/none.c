@@ -196,7 +196,7 @@ void flushmemscreen(Rectangle r) {
 
     // copy area of gscreen to actual display
 
-    char name[2048];
+    //char name[2048];
     //sprintf(name,"screen-%08d_%d-%d_%d-%d.png",count++,r.min.x,r.max.x,r.min.y,r.max.y);
     //XLOG("  calling.: write_png_file, '%s'",name);
     //write_png_file(name,1024,1024,gscreen->data->bdata);
@@ -213,7 +213,8 @@ void flushmemscreen(Rectangle r) {
 
 void mouseset(Point p) {
     XLOG("mouseset %d,%d",p.x,p.y);
-
+    sdl_cursor_show(1);
+    sdl_cursor_move(p.x,p.y);
     // draw mouse on screen, or warp hardware cursor to position
     /*
      * qlock(&drawlock);
@@ -244,6 +245,8 @@ void getcolor(ulong i, ulong *r, ulong *g, ulong *b) {
 void setcursor() {
     XLOG("setcursor");
 
+    sdl_cursor_show(1);
+
     qlock(&drawlock);
     flushmemscreen(screenr);
     qunlock(&drawlock);
@@ -260,4 +263,12 @@ void guimain(void)
 
     kproc("cpu", cpuproc, nil);
     sdl_loop();
+}
+
+void post_mouse(int x, int y, int b, unsigned long t) {
+    absmousetrack(x, y, b, t);
+}
+
+void post_keyboard(int rune,int down) {
+    kbdkey((Rune)rune,down);
 }
