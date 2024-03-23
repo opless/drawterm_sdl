@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "none.h"
 #include "keyboard.h"
@@ -214,16 +215,16 @@ void tmp_understand_textinput(SDL_Event *in, char *buf) {
     char *p = in->text.text;
     SDL_Log("                e.text  00= "
             "%02x %02x %02x %02x . %02x %02x %02x %02x : ",
-            p[0x00],p[0x01],p[0x02],p[0x03], p[0x04],p[0x05],p[0x06],p[0x07]);
+            p[0x00]&0xFF,p[0x01]&0xFF,p[0x02]&0xFF,p[0x03]&0xFF, p[0x04]&0xFF,p[0x05]&0xFF,p[0x06]&0xFF,p[0x07]&0xFF);
     SDL_Log("                e.text  08= "
             "%02x %02x %02x %02x . %02x %02x %02x %02x | ",
-            p[0x08],p[0x09],p[0x0A],p[0x0B], p[0x0C],p[0x0D],p[0x0E],p[0x0F]);
+            p[0x08]&0xFF,p[0x09]&0xFF,p[0x0A]&0xFF,p[0x0B]&0xFF, p[0x0C]&0xFF,p[0x0D]&0xFF,p[0x0E]&0xFF,p[0x0F]&0xFF);
     SDL_Log("                e.text  10= "
             "%02x %02x %02x %02x . %02x %02x %02x %02x : ",
-            p[0x10],p[0x11],p[0x12],p[0x13], p[0x14],p[0x15],p[0x16],p[0x17]);
+            p[0x10]&0xFF,p[0x11]&0xFF,p[0x12]&0xFF,p[0x13]&0xFF, p[0x14]&0xFF,p[0x15]&0xFF,p[0x16]&0xFF,p[0x17]&0xFF);
     SDL_Log("                e.text  18= "
             "%02x %02x %02x %02x . %02x %02x %02x %02x",
-            p[0x18],p[0x19],p[0x1A],p[0x1B], p[0x1C],p[0x1D],p[0x1E],p[0x1F]);
+            p[0x18]&0xFF,p[0x19]&0xFF,p[0x1A]&0xFF,p[0x1B]&0xFF, p[0x1C]&0xFF,p[0x1D]&0xFF,p[0x1E]&0xFF,p[0x1F]&0xFF);
 }
 void tmp_understand_mousem(SDL_Event *in, char *buf) {
     tmp_understand_plain(in,buf);
@@ -321,6 +322,50 @@ void tmp_understand(SDL_Event *e) {
             break;
     }
 }
+// stupid keymapping only works with ascii
+int simple_keymap(int c, SDL_Event *e) {
+    int shifted = (e->key.keysym.mod == KMOD_LSHIFT || e->key.keysym.mod == KMOD_RSHIFT);
+    int caps = e->key.keysym.mod == KMOD_CAPS;
+    if (isalpha(c) & (shifted || caps)) {
+        return toupper(c);
+    }
+    // punctuation on US/ISO format
+    if (ispunct(c) & shifted) {
+        switch(c) {
+            case '-': return '_';
+            case '=': return '+';
+            case '[': return '{';
+            case ']': return '}';
+            case ';': return ':';
+            case '\'': return '"';
+            case '\\': return '|';
+            case ',': return '<';
+            case '.': return '>';
+            case '/': return '?';
+            case '`': return '~';
+            default:
+                break;
+        }
+    }
+    // us number keymapping
+    if (isdigit(c) & shifted) {
+        switch (c) {
+            case '0': return ')';
+            case '1': return '!';
+            case '2': return '@';
+            case '3': return '#';
+            case '4': return '$';
+            case '5': return '%';
+            case '6': return '^';
+            case '7': return '&';
+            case '8': return '*';
+            case '9': return '(';
+            default:
+                break;
+        }
+    }
+    return c;
+}
 void sdl_loop() {
     sdl_init(1024,1024);
     int run = 1;
@@ -348,10 +393,13 @@ void sdl_loop() {
                         temp = e.key.keysym.sym;
                         flag = e.type == SDL_KEYDOWN;
 
+                        // only for ASCII
                         if(temp < 0x80) {
                             if(temp == SDLK_RETURN) {
                                 temp = '\n';
                             }
+                            temp = simple_keymap(temp, &e);
+
                             post_keyboard(temp, flag);
                         } else {
                             switch (temp) {
