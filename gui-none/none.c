@@ -121,16 +121,16 @@ int clipwrite(char *buf) {
 }
 
 void flushmemscreen(Rectangle r) {
-    XLOG("flushmemscreen %d-%d, %d-%d",r.min.x,r.max.x,r.min.y,r.max.y);
-
+    //XLOG("flushmemscreen %d-%d, %d-%d", r.min.x, r.max.x, r.min.y, r.max.y);
+/*
     // if no overlap then don't bother
-    if(rectclip(&r,gscreen->clipr) == 0) {
+    if (rectclip(&r, gscreen->clipr) == 0) {
         XLOG("... no overlap");
         return;
     }
 
     Memimage *changed = NULL;
-/*
+
     // copy into small rectangle and send it for writing to screen.
     if(!(r.min.x == gscreen->clipr.min.x &&
        r.min.y == gscreen->clipr.min.y &&
@@ -138,17 +138,19 @@ void flushmemscreen(Rectangle r) {
        r.max.y == gscreen->clipr.max.y )) {
         changed = allocmemimage(r, gscreen->chan);
     }
-*/
+
     if(changed) {
         memimagedraw(changed, r, gscreen, r.min, nil, r.min, S);
-        sdl_write(changed->data->bdata,r.min.x,r.min.y,r.max.x,r.max.y);
+        sdl_write(changed->data->bdata,
+                  r.min.x,r.min.y,
+                  r.max.x,r.max.y);
         freememimage(changed);
-    } else {
+    } else { */
         // if full screen, or can't allocate small memory
         sdl_write(gscreen->data->bdata,
                   gscreen->clipr.min.x, gscreen->clipr.min.y,
                   gscreen->clipr.max.x, gscreen->clipr.max.y);
-    }
+    //}
 }
 
 

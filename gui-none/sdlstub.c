@@ -46,7 +46,7 @@ int sdl_init(int w, int h) {
 }
 
 
-int sdl_write(unsigned char* rgb,int xmin, int ymin, int xmax,int ymax) {
+int sdl_write(unsigned char* rgb,int xmin, int ymin,int xmax,int ymax) {
     if(! window) {
         return 0;
     }
@@ -56,7 +56,7 @@ int sdl_write(unsigned char* rgb,int xmin, int ymin, int xmax,int ymax) {
     // make image for what we're about to draw
     int w = xmax - xmin;
     int h = ymax - ymin;
-    SDL_Rect destRect = { xmin, xmax, ymin, ymax };
+    SDL_Rect destRect = { xmin, ymin, xmax, ymax };
 
     int d = 24; // 24 bit
     int p = 3*1024; // pitch is the length of each scanline in bytes
@@ -73,7 +73,7 @@ int sdl_write(unsigned char* rgb,int xmin, int ymin, int xmax,int ymax) {
         return 11;
     }
 
-    SDL_RenderClear(renderer);
+    //SDL_RenderClear(renderer);
     SDL_RenderCopy(renderer, texture, NULL, &destRect);
     SDL_RenderPresent(renderer);
 
