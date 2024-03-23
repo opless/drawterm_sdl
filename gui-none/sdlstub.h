@@ -3,8 +3,8 @@
 //
 
 
-int sdl_write(int x, int y, unsigned char* rgb,int xmin, int xmax,int ymin,int ymax);
-
+int sdl_write(unsigned char* rgb,int xmin, int xmax,int ymin,int ymax);
+void sdl_get_screen(int *x, int *y);
 void sdl_loop();
 
 void sdl_cursor_show(int flag);

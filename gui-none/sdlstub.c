@@ -22,7 +22,7 @@ int sdl_init(int w, int h) {
         return 1;
     }
 
-    window = SDL_CreateWindow("DrawTermSDL", 10, 10, w+10, h+10, SDL_WINDOW_SHOWN);
+    window = SDL_CreateWindow("DrawTermSDL", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, w, h, SDL_WINDOW_SHOWN);
     if (window == NULL) {
         fprintf(stderr, "SDL_CreateWindow Error: %s\n", SDL_GetError());
         return 2;
@@ -46,31 +46,33 @@ int sdl_init(int w, int h) {
 }
 
 
-int sdl_write(int x, int y, unsigned char* rgb,int xmin, int xmax,int ymin,int ymax) {
+int sdl_write(unsigned char* rgb,int xmin, int ymin, int xmax,int ymax) {
     if(! window) {
         return 0;
     }
 
     // now copy rectangle to window, thanks.
 
-    // ignore rectangle.
-    int w = 1024;
-    int h = 1024;
-    SDL_Rect destRect = { 0, 0, w, h };
+    // make image for what we're about to draw
+    int w = xmax - xmin;
+    int h = ymax - ymin;
+    SDL_Rect destRect = { xmin, xmax, ymin, ymax };
 
     int d = 24; // 24 bit
     int p = 3*1024; // pitch is the length of each scanline in bytes
-    SDL_Surface *surface = SDL_CreateRGBSurfaceFrom((void*)rgb,w,h,d, p,0xFF0000, 0x00FF00, 0x0000FF, 0 );
+    SDL_Surface *surface = SDL_CreateRGBSurfaceFrom((void*)rgb, w,h, d,p, 0xFF0000, 0x00FF00, 0x0000FF, 0 );
     if (!surface) {
         SDL_Log("Failed to create surface: %s", SDL_GetError());
         return 10;
     }
+
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
     if (!texture) {
         SDL_Log("Failed to create texture: %s", SDL_GetError());
         SDL_FreeSurface(surface);
         return 11;
     }
+
     SDL_RenderClear(renderer);
     SDL_RenderCopy(renderer, texture, NULL, &destRect);
     SDL_RenderPresent(renderer);
@@ -366,8 +368,12 @@ int simple_keymap(int c, SDL_Event *e) {
     }
     return c;
 }
+void sdl_get_screen(int *x, int *y) {
+    SDL_GetWindowSize(window,x,y);
+}
 void sdl_loop() {
-    sdl_init(1024,1024);
+    sdl_init(1024,768);
+    start_cpu();
     int run = 1;
     while (run) {
         if(window != NULL) {
