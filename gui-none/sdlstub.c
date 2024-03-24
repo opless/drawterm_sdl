@@ -16,6 +16,8 @@ SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
 SDL_Cursor* current_cursor = NULL;
 
+SDL_Surface *surface=NULL;
+
 int sdl_init(int w, int h) {
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
         fprintf(stderr, "SDL_Init Error: %s\n", SDL_GetError());
@@ -45,51 +47,12 @@ int sdl_init(int w, int h) {
         SDL_Log("SDL_CreateSystemCursor (normal) Error: %s", SDL_GetError());
     }
     SDL_SetCursor(current_cursor);
-    return 0;
-}
 
 
-int sdl_write(unsigned char* rgb, int depth, int pitch,int xmin, int ymin,int xmax,int ymax) {
-    SDL_Log("sdl_write rgb:%p x=%d..%d y=%d...%d",rgb,xmin,xmax,ymin,ymax);
-    if(! window) {
-        return 0;
-    }
-
-    // now copy rectangle to window, thanks.
-
-    // make image for what we're about to draw
-    int w = xmax - xmin;
-    int h = ymax - ymin;
-    SDL_Rect destRect = { xmin, ymin, xmax, ymax };
-
-
-    // pitch is the length of each scanline in bytes
-    SDL_Surface *surface = SDL_CreateRGBSurfaceFrom((void*)rgb,
-                                                    w, h,
-                                                    depth,pitch,
-                                                    0xFF0000, 0x00FF00, 0x0000FF, 0xFF000000 );
-    // This is R G B A Masks
-    if (!surface) {
-        SDL_Log("Failed to create surface: %s", SDL_GetError());
-        return 10;
-    }
-
-    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
-    if (!texture) {
-        SDL_Log("Failed to create texture: %s", SDL_GetError());
-        SDL_FreeSurface(surface);
-        return 11;
-    }
-
-    //SDL_RenderClear(renderer);
-    SDL_RenderCopy(renderer, texture, NULL, &destRect);
-    SDL_RenderPresent(renderer);
-
-    SDL_DestroyTexture(texture);
-    SDL_FreeSurface(surface);
 
     return 0;
 }
+
 
 void sdl_cursor_show(int flag, unsigned char *data,unsigned char *mask, int width, int height, int x, int y) {
     int toggle = flag == 0 ? SDL_DISABLE : SDL_ENABLE;
@@ -294,7 +257,6 @@ void tmp_understand_audiodev(SDL_Event *in, char *buf) {
             SDL_GetAudioDeviceName(in->adevice.which, in->adevice.iscapture));
 
 }
-
 
 void tmp_understand(SDL_Event *e) {
     char buf[1024];
@@ -517,3 +479,49 @@ void sdl_loop() {
     exit(-1);
 }
 
+void sdl_update(unsigned char *argb32) {
+    SDL_Log("sdl_update %p", argb32);
+
+    if (argb32 == NULL) {
+        SDL_Log("* clear");
+        if (surface) {
+            SDL_Log("* * surface");
+            SDL_FreeSurface(surface);
+            surface = NULL;
+        }
+        return;
+    }
+    int w, h;
+    sdl_get_screen(&w, &h);
+
+    if (!surface) {
+        SDL_Log("* create surface");
+
+        int d, p;
+        sdl_get_screen(&w, &h);
+        d = 32; //ARGB = 32
+        p = 4 * w; // pitch = 4 bytes times pixel width
+        surface = SDL_CreateRGBSurfaceFrom((void *) argb32,
+                                           w, h,
+                                           d, p,
+                                           0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+        if (!surface) {
+            SDL_Log("Failed to create surface: %s", SDL_GetError());
+            return;
+        }
+    }
+
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
+    if (!texture) {
+        SDL_Log("Failed to create texture: %s", SDL_GetError());
+        SDL_FreeSurface(surface);
+        surface = NULL;
+        return;
+    }
+
+    SDL_Rect destRect = {0, 0, w, h};
+    SDL_RenderClear(renderer);
+    SDL_RenderCopy(renderer, texture, NULL, &destRect);
+    SDL_RenderPresent(renderer);
+    SDL_DestroyTexture(texture);
+}

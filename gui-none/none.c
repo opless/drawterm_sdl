@@ -101,6 +101,7 @@ void screensize(Rectangle r, ulong chan)
     }
     if(gscreen != nil) {
         XLOG("err");
+        sdl_update(NULL); // invalidate screen
         freememimage(gscreen);
     }
     gscreen = i;
@@ -134,39 +135,44 @@ void flushmemscreen(Rectangle r) {
         return;
     }
 
+    sdl_update(gscreen->data->bdata);
+
     // if anything turns out negative, or zero ... whinge, and bail.
-    int width = r.max.x - r.min.x;
-    int height = r.max.y - r.min.y;
+    //int width = r.max.x - r.min.x;
+    //int height = r.max.y - r.min.y;
 
-    if(width <= gscreen->clipr.min.x || width > gscreen->clipr.max.x ||
-            height <= gscreen->clipr.min.y || height > gscreen->clipr.max.y
-            ) {
-        XLOG("Width = %d, Height = %d which is out of bounds, bailing ",width, height);
-        return;
-    }
+    //if(width <= gscreen->clipr.min.x || width > gscreen->clipr.max.x ||
+    //        height <= gscreen->clipr.min.y || height > gscreen->clipr.max.y
+    //        ) {
+    //    XLOG("Width = %d, Height = %d which is out of bounds, bailing ",width, height);
+    //    return;
+    //}
 
-    int depth = gscreen->depth;
-    int pitch = gscreen->nchan * width;
+    // just nudge all.
+    //width = gscreen->clipr.max.x;
 
-    Memimage *changed = NULL;
+    //int depth = gscreen->depth;
+    //int pitch = gscreen->nchan * width;
 
-    Rectangle rect = Rect(0,0,width,height);
+    //Memimage *changed = NULL;
+
+    //Rectangle rect = Rect(0,0,width,height);
     // copy into small rectangle and send it for writing to screen.
-    changed = allocmemimage(r,gscreen->chan);
-    if(changed) {
-        memimagedraw(changed, rect, gscreen, r.min, nil, r.min, S);
-        sdl_write(changed->data->bdata,
-                  depth, pitch,
-                  r.min.x,r.min.y,
-                  r.max.x,r.max.y);
-        freememimage(changed);
-    } else {
-        // if full screen, or can't allocate small memory
-        sdl_write(gscreen->data->bdata,
-                  depth,pitch,
-                  gscreen->clipr.min.x, gscreen->clipr.min.y,
-                  gscreen->clipr.max.x, gscreen->clipr.max.y);
-    }
+    //changed = allocmemimage(r,gscreen->chan);
+    //if(changed) {
+    //    memimagedraw(changed, rect, gscreen, r.min, nil, r.min, S);
+    //    sdl_write(changed->data->bdata,
+    //              depth, pitch,
+    //              r.min.x,r.min.y,
+    //              r.max.x,r.max.y);
+    //    freememimage(changed);
+    //} else {
+    //   // if full screen, or can't allocate small memory
+    //   sdl_write(gscreen->data->bdata,
+    //             depth,pitch,
+    //             gscreen->clipr.min.x, gscreen->clipr.min.y,
+    //             gscreen->clipr.max.x, gscreen->clipr.max.y);
+    //}
 }
 
 
