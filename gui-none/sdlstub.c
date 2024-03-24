@@ -14,7 +14,7 @@
 
 SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
-SDL_Cursor* normal_cursor = NULL;
+SDL_Cursor* current_cursor = NULL;
 
 int sdl_init(int w, int h) {
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
@@ -22,13 +22,16 @@ int sdl_init(int w, int h) {
         return 1;
     }
 
-    window = SDL_CreateWindow("DrawTermSDL", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, w, h, SDL_WINDOW_SHOWN);
+    window = SDL_CreateWindow("DrawTermSDL",
+                              SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, w, h,
+                              SDL_WINDOW_RESIZABLE);
     if (window == NULL) {
         fprintf(stderr, "SDL_CreateWindow Error: %s\n", SDL_GetError());
         return 2;
     }
 
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+//    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    renderer = SDL_CreateRenderer(window, -1, 0);
     if (renderer == NULL) {
         fprintf(stderr, "SDL_CreateRenderer Error: %s\n", SDL_GetError());
         SDL_DestroyWindow(window);
@@ -37,16 +40,17 @@ int sdl_init(int w, int h) {
     }
 
     // mouse
-    normal_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
-    if(normal_cursor == NULL) {
+    current_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+    if(current_cursor == NULL) {
         SDL_Log("SDL_CreateSystemCursor (normal) Error: %s", SDL_GetError());
     }
-    SDL_SetCursor(normal_cursor);
+    SDL_SetCursor(current_cursor);
     return 0;
 }
 
 
-int sdl_write(unsigned char* rgb,int xmin, int ymin,int xmax,int ymax) {
+int sdl_write(unsigned char* rgb, int depth, int pitch,int xmin, int ymin,int xmax,int ymax) {
+    SDL_Log("sdl_write rgb:%p x=%d..%d y=%d...%d",rgb,xmin,xmax,ymin,ymax);
     if(! window) {
         return 0;
     }
@@ -58,9 +62,13 @@ int sdl_write(unsigned char* rgb,int xmin, int ymin,int xmax,int ymax) {
     int h = ymax - ymin;
     SDL_Rect destRect = { xmin, ymin, xmax, ymax };
 
-    int d = 24; // 24 bit
-    int p = 3*1024; // pitch is the length of each scanline in bytes
-    SDL_Surface *surface = SDL_CreateRGBSurfaceFrom((void*)rgb, w,h, d,p, 0xFF0000, 0x00FF00, 0x0000FF, 0 );
+
+    // pitch is the length of each scanline in bytes
+    SDL_Surface *surface = SDL_CreateRGBSurfaceFrom((void*)rgb,
+                                                    w, h,
+                                                    depth,pitch,
+                                                    0xFF0000, 0x00FF00, 0x0000FF, 0xFF000000 );
+    // This is R G B A Masks
     if (!surface) {
         SDL_Log("Failed to create surface: %s", SDL_GetError());
         return 10;
@@ -83,8 +91,20 @@ int sdl_write(unsigned char* rgb,int xmin, int ymin,int xmax,int ymax) {
     return 0;
 }
 
-void sdl_cursor_show(int flag) {
+void sdl_cursor_show(int flag, unsigned char *data,unsigned char *mask, int width, int height, int x, int y) {
     int toggle = flag == 0 ? SDL_DISABLE : SDL_ENABLE;
+
+    if(toggle) {
+        SDL_Cursor *new_cursor = SDL_CreateCursor(data,mask,width,height,x,y);
+        if(new_cursor) {
+            if (current_cursor) {
+                SDL_FreeCursor(current_cursor);
+            }
+            current_cursor = new_cursor;
+            SDL_SetCursor(current_cursor);
+        }
+    }
+
     if(toggle != SDL_ShowCursor(toggle)) {
         SDL_Log("sdl_cursor_show: %d, Error: %s",flag,SDL_GetError());
     }
@@ -382,6 +402,7 @@ void sdl_loop() {
             if(SDL_PollEvent(&e)) {
                 int temp =0;
                 int flag =0;
+
                 switch (e.type) {
                     case SDL_QUIT:
                         run = 0;
@@ -472,6 +493,17 @@ void sdl_loop() {
                                     SDL_Log("??? KeySym unknown 0x%04x %s",temp, e.type == SDL_KEYDOWN ? "Down" : "Up");
                                     break;
                             }
+                        }
+                        break;
+                    case SDL_WINDOWEVENT:
+                        //tmp_understand(&e);
+                        if(e.window.event == SDL_WINDOWEVENT_RESIZED) {
+                            SDL_Log("Resized to %d,%d",e.window.data1, e.window.data2);
+                            // odd pixels are odd
+                            int x = e.window.data1;
+                            int y = e.window.data2;
+
+                            post_resize(x, y);
                         }
                         break;
                     default:

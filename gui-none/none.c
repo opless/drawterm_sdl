@@ -54,7 +54,8 @@ void screeninit(void) {
     XLOG("screeninit");
     memimageinit();
     snarfbuf = NULL;
-    chan = RGB24;
+    chan = ARGB32;  // is there a preferred pixel format with sdl? rgb24 likes only even sizes
+    // mobiles prefer abgr, opengl/d3d argb
     Rectangle screenr;
     screenr.min.x = 0;
     screenr.min.y = 0;
@@ -94,10 +95,14 @@ void screensize(Rectangle r, ulong chan)
     XLOG("  chan = %u", chan);
     Memimage *i;
 
-    if((i = allocmemimage(r, chan)) == nil)
+    if((i = allocmemimage(r, chan)) == nil) {
+        XLOG("oops");
         return;
-    if(gscreen != nil)
+    }
+    if(gscreen != nil) {
+        XLOG("err");
         freememimage(gscreen);
+    }
     gscreen = i;
     gscreen->clipr = ZR;
 }
@@ -121,50 +126,54 @@ int clipwrite(char *buf) {
 }
 
 void flushmemscreen(Rectangle r) {
-    //XLOG("flushmemscreen %d-%d, %d-%d", r.min.x, r.max.x, r.min.y, r.max.y);
-/*
+    XLOG("flushmemscreen %d-%d, %d-%d", r.min.x, r.max.x, r.min.y, r.max.y);
+
     // if no overlap then don't bother
     if (rectclip(&r, gscreen->clipr) == 0) {
         XLOG("... no overlap");
         return;
     }
 
-    Memimage *changed = NULL;
+    // if anything turns out negative, or zero ... whinge, and bail.
+    int width = r.max.x - r.min.x;
+    int height = r.max.y - r.min.y;
 
-    // copy into small rectangle and send it for writing to screen.
-    if(!(r.min.x == gscreen->clipr.min.x &&
-       r.min.y == gscreen->clipr.min.y &&
-       r.max.x == gscreen->clipr.max.x &&
-       r.max.y == gscreen->clipr.max.y )) {
-        changed = allocmemimage(r, gscreen->chan);
+    if(width <= gscreen->clipr.min.x || width > gscreen->clipr.max.x ||
+            height <= gscreen->clipr.min.y || height > gscreen->clipr.max.y
+            ) {
+        XLOG("Width = %d, Height = %d which is out of bounds, bailing ",width, height);
+        return;
     }
 
+    int depth = gscreen->depth;
+    int pitch = gscreen->nchan * width;
+
+    Memimage *changed = NULL;
+
+    Rectangle rect = Rect(0,0,width,height);
+    // copy into small rectangle and send it for writing to screen.
+    changed = allocmemimage(r,gscreen->chan);
     if(changed) {
-        memimagedraw(changed, r, gscreen, r.min, nil, r.min, S);
+        memimagedraw(changed, rect, gscreen, r.min, nil, r.min, S);
         sdl_write(changed->data->bdata,
+                  depth, pitch,
                   r.min.x,r.min.y,
                   r.max.x,r.max.y);
         freememimage(changed);
-    } else { */
+    } else {
         // if full screen, or can't allocate small memory
         sdl_write(gscreen->data->bdata,
+                  depth,pitch,
                   gscreen->clipr.min.x, gscreen->clipr.min.y,
                   gscreen->clipr.max.x, gscreen->clipr.max.y);
-    //}
+    }
 }
 
 
 void mouseset(Point p) {
     XLOG("mouseset %d,%d",p.x,p.y);
-    sdl_cursor_show(1);
+    setcursor();
     sdl_cursor_move(p.x,p.y);
-    // draw mouse on screen, or warp hardware cursor to position
-    /*
-     * qlock(&drawlock);
-     * mousexy = p;
-     * flushmemscreen(screenr);
-     * qunlock(&drawlock);
-     */
 }
 
 
@@ -188,7 +197,14 @@ void getcolor(ulong i, ulong *r, ulong *g, ulong *b) {
 void setcursor() {
     XLOG("setcursor");
 
-    sdl_cursor_show(1);
+    uchar src[2 * 16], mask[2 * 16];
+
+    for (int i = 0; i < 2 * 16; i++) {
+        src[i] = cursor.set[i];
+        mask[i] = cursor.set[i] | cursor.clr[i];
+    }
+
+    sdl_cursor_show(1, src, mask, 16, 16, -cursor.offset.x, -cursor.offset.y);
 
     qlock(&drawlock);
     flushmemscreen(gscreen->clipr);
@@ -218,4 +234,8 @@ void post_mouse(int x, int y, int b, unsigned long t) {
 
 void post_keyboard(int rune,int down) {
     kbdkey((Rune)rune,down);
+}
+
+void post_resize(int w, int h) {
+    screenresize(Rect(0,0,w,h));
 }
