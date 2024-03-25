@@ -1,0 +1,22 @@
+# Mac OS X
+PTHREAD=	# for Mac
+AR=ar
+AS=as
+RANLIB=ranlib
+CC=gcc
+SDL_CFLAGS=$(shell sdl2-config --cflags)
+SDL_LDFLAGS=$(shell sdl2-config --libs)
+CFLAGS=-fno-omit-frame-pointer -Wall -Wno-missing-braces -ggdb -I$(ROOT) -I$(ROOT)/include -I$(ROOT)/kern -c -D_THREAD_SAFE $(PTHREAD) -O0 $(SDL_CFLAGS)
+O=o
+OS=posix
+GUI=sdl
+LDADD=-ggdb
+LDFLAGS=$(PTHREAD) $(SDL_LDFLAGS)
+TARG=drawterm
+AUDIO=none
+
+all: default
+
+libmachdep.a:
+	arch=`uname -m|sed 's/i.86/386/;s/Power Macintosh/power/; s/x86_64/amd64/'`; \
+	(cd posix-$$arch &&  make)
