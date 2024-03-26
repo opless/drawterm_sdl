@@ -46,13 +46,9 @@ int sdl_init(int w, int h) {
 }
 
 void sdl_get_size(int *x, int *y) {
-    SDL_Log("%s %s:%d", __PRETTY_FUNCTION__ , __FILE__ , __LINE__);
-
     SDL_GetWindowSize(window,x,y);
 }
 void sdl_cursor_set(unsigned char *data,unsigned char *mask, int x, int y) {
-    SDL_Log("%s %s:%d", __PRETTY_FUNCTION__ , __FILE__ , __LINE__);
-
     SDL_Cursor *c = SDL_CreateCursor(data, mask, 16, 16, x, y);
     if(c) {
         if(current_cursor) {
@@ -64,13 +60,9 @@ void sdl_cursor_set(unsigned char *data,unsigned char *mask, int x, int y) {
     SDL_ShowCursor(SDL_ENABLE);
 }
 void sdl_cursor_move(int x, int y){
-    SDL_Log("%s %s:%d", __PRETTY_FUNCTION__ , __FILE__ , __LINE__);
-
     SDL_WarpMouseInWindow(window, x,y);
 }
 void sdl_update(unsigned char * argb32) {
-    SDL_Log("%s %s:%d", __PRETTY_FUNCTION__ , __FILE__ , __LINE__);
-
     // update with null is to free the current surface
     if (argb32 == NULL) {
         if (surface) {
@@ -227,8 +219,6 @@ int sdl_key_special(SDL_Event *e) {
     return 0;
 }
 void sdl_key_event(SDL_Event *e) {
-    SDL_Log("%s %s:%d", __PRETTY_FUNCTION__ , __FILE__ , __LINE__);
-
     int key = e->key.keysym.sym;
     int down = e->type == SDL_KEYDOWN;
 
@@ -246,7 +236,7 @@ void sdl_mouse_wheel(SDL_Event *e) {
     int x,y,b,q;
     b = SDL_GetMouseState(&x, &y);
     q = (e->wheel.direction == SDL_MOUSEWHEEL_FLIPPED ? -1 : 1) * e->wheel.y;
-    SDL_Log("mousewheel = %d",q);
+
     if(q != 0) {
         q = (q > 0 ? 8 : 16) | b;
         post_mouse(x, y, q, e->wheel.timestamp);
@@ -255,8 +245,6 @@ void sdl_mouse_wheel(SDL_Event *e) {
 }
 
 void sdl_poll_event() {
-    SDL_Log("%s %s:%d", __PRETTY_FUNCTION__ , __FILE__ , __LINE__);
-
     SDL_Event e;
     if(!SDL_WaitEventTimeout(&e,10000)) {
         return;
@@ -292,7 +280,6 @@ void sdl_poll_event() {
 
 void sdl_loop() {
     sdl_init(1024,768); // TODO: get sensible defaults from command line
-    SDL_Log("%s %s:%d", __PRETTY_FUNCTION__ , __FILE__ , __LINE__);
 
     start_cpu();
 
