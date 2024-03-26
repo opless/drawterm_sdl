@@ -86,8 +86,6 @@ void sdl_update(unsigned char * argb32) {
     // if surface is NULL (probably cleared for screen resize/initialisation)
     if (!surface) {
 
-        int d, p;
-
         int depth = 32; //ARGB = 32
         int pitch = 4 * w; // pitch = 4 bytes times pixel width
         surface = SDL_CreateRGBSurfaceFrom((void *) argb32,
@@ -244,6 +242,17 @@ void sdl_key_event(SDL_Event *e) {
         }
     }
 }
+void sdl_mouse_wheel(SDL_Event *e) {
+    int x,y,b,q;
+    b = SDL_GetMouseState(&x, &y);
+    q = (e->wheel.direction == SDL_MOUSEWHEEL_FLIPPED ? -1 : 1) * e->wheel.y;
+    SDL_Log("mousewheel = %d",q);
+    if(q != 0) {
+        q = (q > 0 ? 8 : 16) | b;
+        post_mouse(x, y, q, e->wheel.timestamp);
+        post_mouse(x, y, b, e->wheel.timestamp);
+    }
+}
 
 void sdl_poll_event() {
     SDL_Log("%s %s:%d", __PRETTY_FUNCTION__ , __FILE__ , __LINE__);
@@ -261,11 +270,14 @@ void sdl_poll_event() {
         case SDL_MOUSEBUTTONDOWN:
             // SDL's Mousebuttons are reported in the same way to plan9
             temp = SDL_GetMouseState(NULL, NULL);
-            post_mouse(e.button.x, e.button.y, temp, e.common.timestamp);
+            post_mouse(e.button.x, e.button.y, temp, e.button.timestamp);
             break;
         case SDL_KEYDOWN:
         case SDL_KEYUP:
             sdl_key_event(&e);
+            break;
+        case SDL_MOUSEWHEEL:
+            sdl_mouse_wheel(&e);
             break;
         case SDL_WINDOWEVENT:
             if(e.window.event == SDL_WINDOWEVENT_RESIZED) {
