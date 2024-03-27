@@ -6,7 +6,7 @@
 static SDL_AudioDeviceID sdl_audio_out_dev = 0;
 
 int sdl_audio_open() {
-    SDL_Log("Using audio driver: %s\n", SDL_GetCurrentAudioDriver());
+    SDL_Log("Using audio driver: %s", SDL_GetCurrentAudioDriver());
     if(SDL_GetCurrentAudioDriver() == NULL) {
         return -1;
     }

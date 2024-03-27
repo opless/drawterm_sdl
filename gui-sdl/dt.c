@@ -12,7 +12,7 @@
 #include "sdl.h"
 
 Memimage *gscreen = NULL;
-char *snarf_buff  = NULL;
+QLock snarf_lock;
 
 void screeninit() {
     ulong chan = ARGB32;
@@ -57,18 +57,17 @@ Memdata *attachscreen(Rectangle *r, ulong *chan, int *depth, int *width, int *so
 }
 
 char *clipread() {
-    if(snarf_buff) {
-        return strdup(snarf_buff);
-    }
-    return nil;
+    qlock(&snarf_lock);
+    char *t = sdl_clipboard_read();
+    qunlock(&snarf_lock);
+    return t;
 }
 
 int clipwrite(char *buf) {
-    if(snarf_buff) {
-        free(snarf_buff);
-    }
-    snarf_buff = strdup(buf);
-    return snarf_buff ? 0 : -1; // -1 is an error
+    qlock(&snarf_lock);
+    int r = sdl_clipboard_write(buf);
+    qunlock(&snarf_lock);
+    return r; // -1 is an error
 }
 
 void flushmemscreen(Rectangle r) {

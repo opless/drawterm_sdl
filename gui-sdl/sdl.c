@@ -291,3 +291,33 @@ void sdl_loop() {
     // if we ever get here, we should exit.
     exit(0);
 }
+
+int sdl_clipboard_write(const char *buf) {
+    static char *empty = "";
+    if (!buf) {
+        buf = empty;
+    }
+    if (SDL_SetClipboardText(buf)) {
+        SDL_Log("SDL_GetClipboardText Error: %s", SDL_GetError());
+        return -1;
+    }
+    return 0;
+}
+
+char *sdl_clipboard_read() {
+    static char *text;
+
+    if (SDL_HasClipboardText()) {
+        char *t = SDL_GetClipboardText();
+
+        if (!t || (strlen(t) == 0)) {
+            SDL_Log("SDL_GetClipboardText Error: %s", SDL_GetError());
+            text = strdup("");
+        } else {
+            text = strdup(t);
+        }
+        return text;
+    } else {
+        return strdup("");
+    }
+}
