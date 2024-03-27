@@ -13,7 +13,7 @@ GUI=sdl
 LDADD=-ggdb
 LDFLAGS=$(PTHREAD) $(SDL_LDFLAGS)
 TARG=drawterm
-AUDIO=none
+AUDIO=sdl
 
 all: default
 

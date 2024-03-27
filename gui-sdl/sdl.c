@@ -291,4 +291,3 @@ void sdl_loop() {
     // if we ever get here, we should exit.
     exit(0);
 }
-
