@@ -243,22 +243,24 @@ void sdl_mouse_wheel(SDL_Event *e) {
         post_mouse(x, y, b, e->wheel.timestamp);
     }
 }
+void sdl_mouse(SDL_Event *e) {
+    int buttons = SDL_GetMouseState(NULL, NULL);
+
+    post_mouse(e->button.x, e->button.y, buttons, e->button.timestamp);
+}
 
 void sdl_poll_event() {
     SDL_Event e;
     if(!SDL_WaitEventTimeout(&e,10000)) {
         return;
     }
-    int temp = 0;
     switch(e.type) {
         case SDL_QUIT:
             exit(0);
         case SDL_MOUSEMOTION:
         case SDL_MOUSEBUTTONUP:
         case SDL_MOUSEBUTTONDOWN:
-            // SDL's Mousebuttons are reported in the same way to plan9
-            temp = SDL_GetMouseState(NULL, NULL);
-            post_mouse(e.button.x, e.button.y, temp, e.button.timestamp);
+            sdl_mouse(&e);
             break;
         case SDL_KEYDOWN:
         case SDL_KEYUP:

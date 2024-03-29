@@ -60,7 +60,7 @@ int sdl_audio_write(void *p, int n) {
     // 44100 samples per second.
     // 1 second = 44100 x 2 x 2 = 176400 samples
     // 176400 x 2 x 2 = 705,600 bytes/sec
-    while(waiting > 32768) {
+    while(waiting > 70560) {
         SDL_Delay(10);
         waiting = SDL_GetQueuedAudioSize(sdl_audio_out_dev);
     }
