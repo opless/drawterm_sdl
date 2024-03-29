@@ -62,23 +62,21 @@ void sdl_cursor_set(unsigned char *data,unsigned char *mask, int x, int y) {
 void sdl_cursor_move(int x, int y){
     SDL_WarpMouseInWindow(window, x,y);
 }
-void sdl_update(unsigned char * argb32, int x, int y, int w, int h) {
-    // update with null is to free the current surface, clear the screen ;-)
-    SDL_Log("%s ... %p @%i,%i  (%i,%i)",__PRETTY_FUNCTION__, argb32 ,x, y, w, h);
+void sdl_update(unsigned char * argb32) {
     int sx, sy;
 
     // 'clear screen'
-    if (argb32 == NULL)  {
+    if (argb32 == NULL) {
         SDL_Log("... argb is NULL, destroying main texture");
         SDL_DestroyTexture(texture);
         texture = NULL;
         return;
     }
 
+    sdl_get_size(&sx, &sy);
     // no texture, create an appropriately sized one
-    if(!texture) {
+    if (!texture) {
         SDL_Log("... main texture is null, creating it");
-        sdl_get_size(&sx,&sy);
         texture = SDL_CreateTexture(renderer,
                                     SDL_PIXELFORMAT_ARGB8888,
                                     SDL_TEXTUREACCESS_STREAMING,
@@ -87,95 +85,33 @@ void sdl_update(unsigned char * argb32, int x, int y, int w, int h) {
 
         if (!texture) {
             SDL_Log("SDL_CreateTexture(texture) error: %s", SDL_GetError());
-            sdl_update(NULL, 0, 0, 0, 0);
             return;
         }
-        SDL_Log("... main texture is %p",texture);
+        SDL_Log("... main texture is %p", texture);
     }
 
-    if(texture) { // (texture exists)
-        sdl_get_size(&sx,&sy);
+    // lock the texture, and memcpy everything as our drawterm screen is the same format as our texture.
 
-        SDL_Log("... main texture exists and screen is: %d, %d",sx,sy);
-        if ( x == 0 && y == 0 && w == sx && h == sy) { // full screen update
-            SDL_Log("   ... full screen update");
-
-            unsigned char *p;
-            int pitch;
-            if (SDL_LockTexture(texture, NULL, (void **) &p, &pitch)) {
-                SDL_Log("SDL_LockTexture(texture) Error: %s", SDL_GetError());
-                sdl_update(NULL, 0, 0, 0, 0);
-                return;
-            }
-            // just copy the entire backbuffer
-            memcpy(p, argb32, pitch * h);
-            SDL_UnlockTexture(texture);
-        }
-
-        if(1){
-            SDL_Log("   ... partial update @%d,%d (%d x %d)",x,y,w,h);
-
-            // partial update
-            SDL_Texture *update = SDL_CreateTexture(renderer,
-                                                    SDL_PIXELFORMAT_ARGB8888,
-                                                    SDL_TEXTUREACCESS_STREAMING,
-                                                    w,
-                                                    h);
-            if (!update) {
-                SDL_Log("SDL_CreateTexture(update) error: %s", SDL_GetError());
-                // probably need a full screen update
-                return;
-            }
-            SDL_Log("copying update to texture: %p", update);
-            unsigned char *p;
-            int pitch;
-            if (SDL_LockTexture(update, NULL, (void **) &p, &pitch)) {
-                SDL_Log("SDL_LockTexture(update) Error: %s", SDL_GetError());
-                // probably need a full screen update here too
-                return;
-            }
-            //memcpy(p, argb32, pitch * h);
-            for(int i=0;i<(pitch*h);i+=4) {
-                *p = 0xFF; // alpha
-                p++;
-                *p = 0xFF; // red
-                p++;
-                *p = 0x00; // green
-                p++;
-                *p = 0xFF; // blue
-                p++;
-            }
-            SDL_UnlockTexture(update);
-
-            SDL_Log("copying update texture %p to rendertarget %p", update, texture);
-            // now write update on texture
-            SDL_SetRenderTarget(renderer, texture);
-            SDL_Rect src_rect = {0,0,w,h};
-            SDL_Rect dst_rect = {x,y,w,h};
-            // might need to set 'SDL_SetTextureBlendMode (SDL_BLENDMODE_NONE)' here?
-            if(SDL_RenderCopy(renderer, update, &src_rect, &dst_rect)) {
-                SDL_Log("SDL_RenderCopy (update->texture) Error: %s", SDL_GetError());
-                // trigger another fullscreen update?
-                return;
-            }
-            // Detach Render Target
-            SDL_SetRenderTarget(renderer, NULL);
-            // destroy update
-            SDL_DestroyTexture(update);
-        }
-        SDL_Log("... drawing to screen");
-        // texture exists and (partial) screen has been copied to it
-        // send texture to screen
-        SDL_RenderClear(renderer);
-        // might need SDL_RenderCopyEx to render upside down for mobile devices
-        // i.e.	SDL_RenderCopyEx(renderer, texture, NULL, NULL, 0, NULL, SDL_FLIP_VERTICAL);
-        if(SDL_RenderCopy(renderer, texture, NULL, NULL)) {
-            SDL_Log("SDL_RenderCopy (texture->screen) Error: %s", SDL_GetError());
-            // trigger fullscreen update?
-            return;
-        }
-        SDL_RenderPresent(renderer);
+    unsigned char *p;
+    int pitch;
+    if (SDL_LockTexture(texture, NULL, (void **) &p, &pitch)) {
+        SDL_Log("SDL_LockTexture(texture) Error: %s", SDL_GetError());
+        // probably need a full screen update here too
+        return;
     }
+
+    memcpy(p, argb32, pitch * sy);
+    SDL_UnlockTexture(texture);
+
+    // send texture to screen
+    SDL_RenderClear(renderer);
+    // might need SDL_RenderCopyEx to render upside down for mobile devices
+    // i.e.	SDL_RenderCopyEx(renderer, texture, NULL, NULL, 0, NULL, SDL_FLIP_VERTICAL);
+    if (SDL_RenderCopy(renderer, texture, NULL, NULL)) {
+        SDL_Log("SDL_RenderCopy (texture->screen) Error: %s", SDL_GetError());
+        return;
+    }
+    SDL_RenderPresent(renderer);
 }
 
 // This is a horrible hack, and we need to do some proper keymapping here

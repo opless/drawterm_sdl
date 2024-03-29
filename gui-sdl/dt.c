@@ -33,7 +33,7 @@ void screeninit() {
 
 void screensize(Rectangle r, ulong chan) {
     if(gscreen) {
-        sdl_update(NULL,r.min.x,r.min.y, Dx(r), Dy(r)); // invalidate sdl's idea of the screen
+        sdl_update(NULL); // invalidate sdl's idea of the screen
         freememimage(gscreen);
         gscreen = NULL;
     }
@@ -71,12 +71,10 @@ int clipwrite(char *buf) {
 }
 
 void flushmemscreen(Rectangle r) {
-    // check for overlap
-    if(rectclip(&r, gscreen->clipr) == 0) {
+    // check for overlap or zero lengths
+    if(rectclip(&r, gscreen->clipr) == 0 || Dx(r) == 0 || Dy(r) == 0)
         return;
-    }
-
-    sdl_update(byteaddr(gscreen, Pt(r.min.x,r.min.y)),r.min.x,r.min.y, Dx(r), Dy(r));
+    sdl_update(gscreen->data->bdata);
 }
 
 void setcolor(ulong i, ulong r, ulong g, ulong b) {
