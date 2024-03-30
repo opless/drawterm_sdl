@@ -165,6 +165,7 @@ int sdl_key_map(SDL_Event *e) {
     return c;
 }
 int sdl_key_special(SDL_Event *e) {
+
     switch (e->key.keysym.sym) {
         // middle cluster
         case SDLK_HOME:        return Khome;
@@ -253,6 +254,20 @@ void sdl_mouse_wheel(SDL_Event *e) {
 }
 void sdl_mouse(SDL_Event *e) {
     int buttons = SDL_GetMouseState(NULL, NULL);
+    SDL_Keymod modstate = SDL_GetModState();
+
+    if(buttons & 1 && modstate & KMOD_CTRL) {
+        SDL_Log("emulate middle");
+        buttons = (buttons ^ 1) | 2;
+    }
+    if(buttons & 1 && modstate & KMOD_ALT) {
+        SDL_Log("emulate right");
+        buttons = (buttons ^ 1) | 4;
+    }
+    if(buttons & 1 && modstate & KMOD_GUI) {
+        SDL_Log("emulate right");
+        buttons = (buttons ^ 1) | 4;
+    }
 
     post_mouse(e->button.x, e->button.y, buttons, e->button.timestamp);
 }
