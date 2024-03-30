@@ -261,10 +261,15 @@ void
 cpumain(int argc, char **argv)
 {
 	char *s;
-
+#ifndef __APPLE__
 	user = getenv("USER");
+#endif
 	host = getenv("cpu");
 	authserver = getenv("auth");
+
+#if defined(__APPLE__)
+    user = nil;
+#endif
 
 	ARGBEGIN{
 	case '9':
